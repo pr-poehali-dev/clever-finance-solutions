@@ -1,12 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  Download,
   Shield,
-  Zap,
-  Lock,
-  Clock,
   Radio,
-  ArrowRight,
   Hash,
   Users,
   Mic,
@@ -15,447 +10,516 @@ import {
   Search,
   Menu,
   X,
-  Wifi,
+  Send,
+  UserPlus,
+  Check,
+  LogOut,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Icon from "@/components/ui/icon";
 
-const Index = () => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const AUTH_URL = "https://functions.poehali.dev/9f1f6cd4-ef39-4d6c-8aa9-a3b0fa392d42";
+const FRIENDS_URL = "https://functions.poehali.dev/c818513e-108b-491b-be7a-8ae1d7792675";
+const MESSAGES_URL = "https://functions.poehali.dev/edca8417-913a-4596-b3b6-60b77e61e61d";
+
+interface User {
+  user_id: number;
+  username: string;
+  display_name: string;
+  token: string;
+}
+
+interface Friend {
+  friendship_id: number;
+  status: string;
+  direction: string;
+  user: { id: number; username: string; display_name: string };
+}
+
+interface Message {
+  id: number;
+  sender_id: number;
+  content: string;
+  created_at: string;
+  display_name: string;
+}
+
+export default function Index() {
+  const [authUser, setAuthUser] = useState<User | null>(() => {
+    const s = localStorage.getItem("link_user");
+    return s ? JSON.parse(s) : null;
+  });
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authForm, setAuthForm] = useState({ username: "", display_name: "", password: "" });
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<{ id: number; username: string; display_name: string }[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [showAddFriend, setShowAddFriend] = useState(false);
+
+  const [activeChat, setActiveChat] = useState<Friend | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [messageText, setMessageText] = useState("");
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  return (
-    <div className="min-h-screen bg-[#1a1f1a] text-white overflow-x-hidden">
-      {/* Навигация */}
-      <nav className="bg-[#141914] border-b border-[#0a0d0a] px-4 sm:px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#4a7c4a] rounded-full flex items-center justify-center">
-              <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">Link</h1>
-              <p className="text-xs text-[#8a9e8a] hidden sm:block">Защищённый мессенджер для военных</p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-4">
-            <Button variant="ghost" className="text-[#8a9e8a] hover:text-white hover:bg-[#2a332a]">
-              <Shield className="w-4 h-4 mr-2" />
-              О безопасности
-            </Button>
-            <Button className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-6 py-2 rounded text-sm font-medium">
-              Подключиться
-            </Button>
-          </div>
-          <Button
-            variant="ghost"
-            className="sm:hidden text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] p-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </div>
+  const saveUser = (u: User) => {
+    setAuthUser(u);
+    localStorage.setItem("link_user", JSON.stringify(u));
+  };
 
-        {mobileMenuOpen && (
-          <div className="sm:hidden mt-4 pt-4 border-t border-[#0a0d0a]">
-            <div className="flex flex-col gap-3">
-              <Button variant="ghost" className="text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] justify-start">
-                <Shield className="w-4 h-4 mr-2" />
-                О безопасности
-              </Button>
-              <Button className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-6 py-2 rounded text-sm font-medium">
-                Подключиться
-              </Button>
-            </div>
-          </div>
-        )}
-      </nav>
+  const logout = () => {
+    setAuthUser(null);
+    localStorage.removeItem("link_user");
+    setFriends([]);
+    setActiveChat(null);
+    setMessages([]);
+  };
 
-      {/* Макет в стиле мессенджера */}
-      <div className="flex min-h-screen">
-        {/* Боковая панель серверов */}
-        <div className="hidden lg:flex w-[72px] bg-[#0f130f] flex-col items-center py-3 gap-2">
-          <div className="w-12 h-12 bg-[#4a7c4a] rounded-2xl hover:rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer">
-            <Radio className="w-6 h-6 text-white" />
-          </div>
-          <div className="w-8 h-[2px] bg-[#1a1f1a] rounded-full"></div>
-          {["ШТ", "АР", "РЗВ", "ОП"].map((unit, i) => (
-            <div
-              key={i}
-              className="w-12 h-12 bg-[#1a1f1a] rounded-3xl hover:rounded-xl transition-all duration-200 flex items-center justify-center cursor-pointer hover:bg-[#4a7c4a]"
-            >
-              <span className="text-[#8a9e8a] text-xs font-bold">{unit}</span>
-            </div>
-          ))}
-        </div>
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    const path = authMode === "login" ? "/login" : "/register";
+    const body: Record<string, string> = { username: authForm.username, password: authForm.password };
+    if (authMode === "register") body.display_name = authForm.display_name;
+    const res = await fetch(`${AUTH_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    setAuthLoading(false);
+    if (!res.ok) { setAuthError(data.error || "Ошибка"); return; }
+    saveUser(data);
+  };
 
-        {/* Основной контент */}
-        <div className="flex-1 flex flex-col lg:flex-row">
-          {/* Боковая панель каналов */}
-          <div
-            className={`${mobileSidebarOpen ? "block" : "hidden"} lg:block w-full lg:w-60 bg-[#141914] flex flex-col`}
-          >
-            <div className="p-4 border-b border-[#0a0d0a] flex items-center justify-between">
-              <h2 className="text-white font-semibold text-base">Link — Штаб</h2>
-              <Button
-                variant="ghost"
-                className="lg:hidden text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] p-1"
-                onClick={() => setMobileSidebarOpen(false)}
+  const loadFriends = async () => {
+    if (!authUser) return;
+    const res = await fetch(`${FRIENDS_URL}/list?user_id=${authUser.user_id}`);
+    const data = await res.json();
+    setFriends(data);
+  };
+
+  useEffect(() => {
+    if (authUser) loadFriends();
+  }, [authUser]);
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim() || !authUser) return;
+    setSearchLoading(true);
+    const res = await fetch(`${FRIENDS_URL}/search?q=${encodeURIComponent(searchQuery)}&user_id=${authUser.user_id}`);
+    const data = await res.json();
+    setSearchResults(data);
+    setSearchLoading(false);
+  };
+
+  const sendFriendRequest = async (targetId: number) => {
+    if (!authUser) return;
+    await fetch(`${FRIENDS_URL}/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: authUser.user_id, target_id: targetId }),
+    });
+    setSearchResults([]);
+    setSearchQuery("");
+    setShowAddFriend(false);
+    loadFriends();
+  };
+
+  const acceptFriend = async (friendshipId: number) => {
+    if (!authUser) return;
+    await fetch(`${FRIENDS_URL}/accept`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: authUser.user_id, friendship_id: friendshipId }),
+    });
+    loadFriends();
+  };
+
+  const openChat = async (friend: Friend) => {
+    setActiveChat(friend);
+    setMobileSidebarOpen(false);
+    if (!authUser) return;
+    const friendId = friend.user.id || (friend as unknown as { user: { id: number } }).user.id;
+    const res = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${friendId}`);
+    const data = await res.json();
+    setMessages(data);
+    setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim() || !authUser || !activeChat) return;
+    setSendingMsg(true);
+    const friendId = activeChat.user.id;
+    const res = await fetch(`${MESSAGES_URL}/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sender_id: authUser.user_id, receiver_id: friendId, content: messageText }),
+    });
+    if (res.ok) {
+      setMessageText("");
+      const histRes = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${friendId}`);
+      setMessages(await histRes.json());
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+    setSendingMsg(false);
+  };
+
+  const acceptedFriends = friends.filter((f) => f.status === "accepted");
+  const pendingIncoming = friends.filter((f) => f.status === "pending" && f.direction === "received");
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  if (!authUser) {
+    return (
+      <div className="min-h-screen bg-[#1a1f1a] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-[#4a7c4a] rounded-full flex items-center justify-center">
+              <Radio className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Link</h1>
+          </div>
+
+          <div className="bg-[#141914] border border-[#0a0d0a] rounded-xl p-6">
+            <div className="flex gap-2 mb-6">
+              <button
+                className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${authMode === "login" ? "bg-[#4a7c4a] text-white" : "text-[#8a9e8a] hover:text-white"}`}
+                onClick={() => setAuthMode("login")}
               >
-                <X className="w-4 h-4" />
-              </Button>
+                Вход
+              </button>
+              <button
+                className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${authMode === "register" ? "bg-[#4a7c4a] text-white" : "text-[#8a9e8a] hover:text-white"}`}
+                onClick={() => setAuthMode("register")}
+              >
+                Регистрация
+              </button>
             </div>
-            <div className="flex-1 p-2">
-              <div className="mb-4">
-                <div className="flex items-center gap-1 px-2 py-1 text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide">
-                  <ArrowRight className="w-3 h-3" />
-                  <span>Текстовые каналы</span>
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {authMode === "register" && (
+                <div>
+                  <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Имя</label>
+                  <input
+                    className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]"
+                    placeholder="Ваше имя"
+                    value={authForm.display_name}
+                    onChange={(e) => setAuthForm({ ...authForm, display_name: e.target.value })}
+                  />
                 </div>
-                <div className="mt-1 space-y-0.5">
-                  {["общий", "оперативный", "снабжение", "связь"].map((channel) => (
-                    <div
-                      key={channel}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded text-[#5a7a5a] hover:text-[#b0c4b0] hover:bg-[#1f261f] cursor-pointer"
-                    >
-                      <Hash className="w-4 h-4" />
-                      <span className="text-sm">{channel}</span>
-                    </div>
-                  ))}
-                </div>
+              )}
+              <div>
+                <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Никнейм</label>
+                <input
+                  className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]"
+                  placeholder="@никнейм"
+                  value={authForm.username}
+                  onChange={(e) => setAuthForm({ ...authForm, username: e.target.value })}
+                />
               </div>
               <div>
-                <div className="flex items-center gap-1 px-2 py-1 text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide">
-                  <ArrowRight className="w-3 h-3" />
-                  <span>Голосовые каналы</span>
-                </div>
-                <div className="mt-1 space-y-0.5">
-                  {["Командный пункт", "Оперативный штаб"].map((channel) => (
-                    <div
-                      key={channel}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded text-[#5a7a5a] hover:text-[#b0c4b0] hover:bg-[#1f261f] cursor-pointer"
-                    >
-                      <Mic className="w-4 h-4" />
-                      <span className="text-sm">{channel}</span>
-                    </div>
-                  ))}
-                </div>
+                <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Пароль</label>
+                <input
+                  type="password"
+                  className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]"
+                  placeholder="••••••••"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                />
               </div>
-            </div>
-            {/* Область пользователя */}
-            <div className="p-2 bg-[#0f130f] flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#4a7c4a] rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">К</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-white text-sm font-medium truncate">Командир</div>
-                <div className="text-[#8a9e8a] text-xs truncate">Защищённый сеанс</div>
-              </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#2a332a]">
-                  <Mic className="w-4 h-4 text-[#8a9e8a]" />
-                </Button>
-                <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-[#2a332a]">
-                  <Settings className="w-4 h-4 text-[#8a9e8a]" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Область чата */}
-          <div className="flex-1 flex flex-col">
-            {/* Заголовок чата */}
-            <div className="h-12 bg-[#1a1f1a] border-b border-[#0a0d0a] flex items-center px-4 gap-2">
+              {authError && <p className="text-red-400 text-sm">{authError}</p>}
               <Button
-                variant="ghost"
-                className="lg:hidden text-[#5a7a5a] hover:text-[#b0c4b0] hover:bg-[#2a332a] p-1 mr-2"
-                onClick={() => setMobileSidebarOpen(true)}
+                type="submit"
+                disabled={authLoading}
+                className="w-full bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white py-2 rounded font-medium"
               >
-                <Menu className="w-5 h-5" />
+                {authLoading ? "..." : authMode === "login" ? "Войти" : "Создать аккаунт"}
               </Button>
-              <Hash className="w-5 h-5 text-[#5a7a5a]" />
-              <span className="text-white font-semibold">оперативный</span>
-              <div className="w-px h-6 bg-[#2a332a] mx-2 hidden sm:block"></div>
-              <span className="text-[#5a7a5a] text-sm hidden sm:block">Защищённый канал связи</span>
-              <div className="ml-auto flex items-center gap-2 sm:gap-4">
-                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-[#8a9e8a] cursor-pointer hover:text-[#b0c4b0]" />
-                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-[#8a9e8a] cursor-pointer hover:text-[#b0c4b0]" />
-                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-[#8a9e8a] cursor-pointer hover:text-[#b0c4b0]" />
-              </div>
-            </div>
+            </form>
 
-            {/* Сообщения чата */}
-            <div className="flex-1 p-2 sm:p-4 space-y-4 sm:space-y-6 overflow-y-auto">
-              {/* Приветственное сообщение от системы */}
-              <div className="flex gap-2 sm:gap-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#4a7c4a] rounded-full flex items-center justify-center flex-shrink-0">
-                  <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-white font-medium text-sm sm:text-base">Link Система</span>
-                    <span className="bg-[#4a7c4a] text-white text-xs px-1 rounded">СИСТЕМА</span>
-                    <span className="text-[#5a7a5a] text-xs hidden sm:inline">Сегодня в 00:00</span>
-                  </div>
-                  <div className="text-[#b0c4b0] text-sm sm:text-base">
-                    <p className="mb-3 sm:mb-4">
-                      <strong>Добро пожаловать в Link!</strong> Защищённый мессенджер для координации и оперативной связи.
-                    </p>
-                    <div className="bg-[#141914] border-l-4 border-[#4a7c4a] p-3 sm:p-4 rounded">
-                      <h3 className="text-white font-semibold mb-2 text-sm sm:text-base">Возможности Link:</h3>
-                      <ul className="space-y-1 text-xs sm:text-sm text-[#8a9e8a]">
-                        <li>Сквозное шифрование всех сообщений и файлов</li>
-                        <li>Голосовая и видеосвязь с защитой канала</li>
-                        <li>Обмен координатами и тактическими картами</li>
-                        <li>Работа в условиях ограниченного интернета</li>
-                        <li>Иерархия доступа по уровням допуска</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Сообщение пользователя */}
-              <div className="flex gap-2 sm:gap-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-700 to-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs sm:text-sm font-medium">А</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-white font-medium text-sm sm:text-base">Майор Алексеев</span>
-                    <span className="text-[#5a7a5a] text-xs hidden sm:inline">Сегодня в 06:14</span>
-                  </div>
-                  <div className="text-[#b0c4b0] mb-3 text-sm sm:text-base">
-                    Выходим на связь. Группа прибыла на точку. Ожидаем подтверждения.
-                  </div>
-
-                  {/* Демо профиля пользователя */}
-                  <div className="bg-[#141914] border border-[#0a0d0a] rounded-lg overflow-hidden w-full max-w-sm">
-                    <div className="h-16 sm:h-20 bg-gradient-to-r from-[#2a4a2a] to-[#1a3a1a] relative">
-                      <div className="absolute -bottom-3 sm:-bottom-4 left-3 sm:left-4">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#141914] bg-[#1a1f1a] overflow-hidden relative">
-                          <div className="w-full h-full bg-gradient-to-br from-[#3a6a3a] to-[#2a4a2a] flex items-center justify-center">
-                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#141914] rounded-full flex items-center justify-center">
-                              <span className="text-lg sm:text-2xl">А</span>
-                            </div>
-                          </div>
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-[#4a7c4a] border-4 border-[#141914] rounded-full"></div>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-[#2a332a] hover:bg-[#3a463a] text-white text-xs px-2 sm:px-3 py-1 rounded"
-                      >
-                        <Settings className="w-3 h-3 mr-1" />
-                        <span className="hidden sm:inline">Профиль</span>
-                      </Button>
-                    </div>
-
-                    <div className="pt-4 sm:pt-6 px-3 sm:px-4 pb-3 sm:pb-4">
-                      <div className="mb-3 sm:mb-4">
-                        <h3 className="text-white text-lg sm:text-xl font-bold mb-1">Майор Алексеев</h3>
-                        <div className="flex items-center gap-2 text-[#8a9e8a] text-xs sm:text-sm">
-                          <span>alekseev_cmd</span>
-                          <span>-</span>
-                          <span>Оперативный доступ</span>
-                          <div className="flex gap-1 ml-2">
-                            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#4a7c4a] rounded-sm"></div>
-                            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#6a5a2a] rounded-sm"></div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mb-3 sm:mb-4">
-                        <div className="bg-[#1a1f1a] rounded-lg p-2 sm:p-3 relative">
-                          <div className="absolute -top-2 left-3 sm:left-4 w-4 h-4 bg-[#1a1f1a] rotate-45"></div>
-                          <div className="flex items-center gap-2 text-[#b0c4b0] text-xs sm:text-sm">
-                            <div className="w-3 h-3 sm:w-4 sm:h-4 bg-[#4a7c4a] rounded-full flex items-center justify-center">
-                              <span className="text-xs">✓</span>
-                            </div>
-                            <span>На боевом дежурстве</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex border-b border-[#2a332a] mb-3 sm:mb-4">
-                        <button className="px-3 sm:px-4 py-2 text-[#5a7a5a] text-xs sm:text-sm font-medium hover:text-[#b0c4b0]">
-                          Сведения
-                        </button>
-                        <button className="px-3 sm:px-4 py-2 text-white text-xs sm:text-sm font-medium border-b-2 border-[#4a7c4a]">
-                          Статус
-                        </button>
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2 text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide mb-2 sm:mb-3">
-                          <span>Активность</span>
-                        </div>
-
-                        <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-[#1a1f1a] rounded-lg">
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#3a6a3a] to-[#2a4a2a] rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Radio className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="text-white font-semibold text-xs sm:text-sm mb-1">Link</div>
-                            <div className="text-[#b0c4b0] text-xs sm:text-sm mb-1">Оперативный канал</div>
-                            <div className="text-[#8a9e8a] text-xs sm:text-sm mb-2">Шифрование активно</div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 bg-[#4a7c4a] rounded-full animate-pulse"></div>
-                              <span className="text-[#4a7c4a] text-xs font-medium">На связи</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ещё одно сообщение */}
-              <div className="flex gap-2 sm:gap-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-yellow-700 to-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs sm:text-sm font-medium">С</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-white font-medium text-sm sm:text-base">Сержант Иванов</span>
-                    <span className="text-[#5a7a5a] text-xs hidden sm:inline">Сегодня в 06:17</span>
-                  </div>
-                  <div className="text-[#b0c4b0] text-sm sm:text-base">
-                    Принял. Маршрут согласован, связь устойчивая. Link работает даже в зоне с плохим сигналом.
-                  </div>
-                </div>
-              </div>
-
-              {/* Секция "Начало работы" */}
-              <div className="bg-[#141914] border border-[#0a0d0a] rounded-lg p-4 sm:p-6 mt-6 sm:mt-8">
-                <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                  <Download className="w-5 h-5 sm:w-6 sm:h-6 text-[#4a7c4a]" />
-                  Подключиться к Link
-                </h2>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
-                  <div className="text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4a7c4a] rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-white font-bold text-sm sm:text-base">1</span>
-                    </div>
-                    <h3 className="text-white font-medium mb-2 text-sm sm:text-base">Получить доступ</h3>
-                    <p className="text-[#8a9e8a] text-xs sm:text-sm">Оставьте заявку — мы свяжемся и выдадим защищённые учётные данные</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4a7c4a] rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-white font-bold text-sm sm:text-base">2</span>
-                    </div>
-                    <h3 className="text-white font-medium mb-2 text-sm sm:text-base">Установить приложение</h3>
-                    <p className="text-[#8a9e8a] text-xs sm:text-sm">Доступно для iOS, Android, Windows и Linux</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4a7c4a] rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-white font-bold text-sm sm:text-base">3</span>
-                    </div>
-                    <h3 className="text-white font-medium mb-2 text-sm sm:text-base">Выйти на связь</h3>
-                    <p className="text-[#8a9e8a] text-xs sm:text-sm">Добавляйте бойцов и создавайте защищённые группы</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-6 sm:px-8 py-2 sm:py-3 rounded text-sm font-medium">
-                    <Download className="w-4 h-4 mr-2" />
-                    Оставить заявку
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="border-[#2a4a2a] text-[#8a9e8a] hover:bg-[#2a332a] hover:border-[#4a6a4a] px-6 sm:px-8 py-2 sm:py-3 rounded text-sm font-medium bg-transparent"
-                  >
-                    <Shield className="w-4 h-4 mr-2" />
-                    О безопасности
-                  </Button>
-                </div>
-              </div>
-
-              {/* Преимущества */}
-              <div className="bg-[#141914] border border-[#0a0d0a] rounded-lg p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Почему Link?</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {[
-                    {
-                      icon: <Lock className="w-4 h-4 sm:w-5 sm:h-5" />,
-                      title: "Сквозное шифрование",
-                      desc: "Военный стандарт AES-256, никто не перехватит",
-                    },
-                    {
-                      icon: <Wifi className="w-4 h-4 sm:w-5 sm:h-5" />,
-                      title: "Работа офлайн",
-                      desc: "Mesh-сеть между устройствами без интернета",
-                    },
-                    {
-                      icon: <Clock className="w-4 h-4 sm:w-5 sm:h-5" />,
-                      title: "Связь 24/7",
-                      desc: "Серверы в защищённой инфраструктуре",
-                    },
-                    {
-                      icon: <Zap className="w-4 h-4 sm:w-5 sm:h-5" />,
-                      title: "Мгновенная доставка",
-                      desc: "Сообщения доходят даже при слабом сигнале",
-                    },
-                  ].map((feature, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded hover:bg-[#1a1f1a] transition-colors"
-                    >
-                      <div className="text-[#4a7c4a] mt-0.5">{feature.icon}</div>
-                      <div>
-                        <div className="text-white font-medium text-xs sm:text-sm">{feature.title}</div>
-                        <div className="text-[#8a9e8a] text-xs sm:text-sm">{feature.desc}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Поле ввода сообщения */}
-            <div className="p-2 sm:p-4">
-              <div className="bg-[#2a332a] rounded-lg px-3 sm:px-4 py-2 sm:py-3">
-                <div className="text-[#5a7a5a] text-xs sm:text-sm">Сообщение #оперативный (шифрование активно)</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Боковая панель участников */}
-          <div className="hidden xl:block w-60 bg-[#141914] p-4">
-            <div className="mb-4">
-              <h3 className="text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide mb-2">На связи — 3</h3>
-              <div className="space-y-2">
-                {[
-                  {
-                    name: "Майор Алексеев",
-                    status: "Оперативный канал",
-                    avatar: "А",
-                    color: "from-green-700 to-green-500",
-                  },
-                  { name: "Сержант Иванов", status: "На дежурстве", avatar: "С", color: "from-yellow-700 to-yellow-500" },
-                  { name: "Командир", status: "Разворачивает Link", avatar: "К", color: "from-green-800 to-green-600" },
-                ].map((user, index) => (
-                  <div key={index} className="flex items-center gap-3 p-2 rounded hover:bg-[#1a1f1a] cursor-pointer">
-                    <div
-                      className={`w-8 h-8 bg-gradient-to-r ${user.color} rounded-full flex items-center justify-center relative`}
-                    >
-                      <span className="text-white text-sm font-medium">{user.avatar}</span>
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#4a7c4a] border-2 border-[#141914] rounded-full"></div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-medium truncate">{user.name}</div>
-                      <div className="text-[#8a9e8a] text-xs truncate">{user.status}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-2 mt-4 text-[#5a7a5a] text-xs">
+              <Lock className="w-3 h-3" />
+              <span>Защищённое соединение</span>
             </div>
           </div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#1a1f1a] text-white overflow-x-hidden">
+      <nav className="bg-[#141914] border-b border-[#0a0d0a] px-4 sm:px-6 py-3">
+        <div className="max-w-full flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-[#4a7c4a] rounded-full flex items-center justify-center">
+              <Radio className="w-4 h-4 text-white" />
+            </div>
+            <h1 className="text-lg font-bold text-white">Link</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[#8a9e8a] text-sm hidden sm:block">{authUser.display_name}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] p-2"
+              onClick={logout}
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              className="sm:hidden text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] p-2"
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            >
+              {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+      </nav>
+
+      <div className="flex" style={{ height: "calc(100vh - 57px)" }}>
+        {/* Сайдбар с контактами */}
+        <div
+          className={`${mobileSidebarOpen ? "absolute z-50 inset-0 top-[57px]" : "hidden"} sm:relative sm:flex w-full sm:w-72 bg-[#141914] flex-col border-r border-[#0a0d0a]`}
+        >
+          <div className="p-3 border-b border-[#0a0d0a]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide">Контакты</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-7 h-7 p-0 text-[#8a9e8a] hover:text-white hover:bg-[#2a332a]"
+                onClick={() => setShowAddFriend(!showAddFriend)}
+                title="Добавить контакт"
+              >
+                <UserPlus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {showAddFriend && (
+              <div className="mt-2 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 bg-[#0f130f] border border-[#2a332a] rounded px-2 py-1 text-white text-sm focus:outline-none focus:border-[#4a7c4a]"
+                    placeholder="Поиск по @никнейму"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-3"
+                    onClick={handleSearch}
+                    disabled={searchLoading}
+                  >
+                    <Search className="w-3 h-3" />
+                  </Button>
+                </div>
+                {searchResults.map((u) => (
+                  <div key={u.id} className="flex items-center gap-2 p-2 bg-[#1a1f1a] rounded">
+                    <div className="w-7 h-7 bg-[#2a4a2a] rounded-full flex items-center justify-center text-xs font-bold text-white">
+                      {u.display_name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-xs font-medium truncate">{u.display_name}</div>
+                      <div className="text-[#5a7a5a] text-xs">@{u.username}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-2 py-1 text-xs"
+                      onClick={() => sendFriendRequest(u.id)}
+                    >
+                      <UserPlus className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            {pendingIncoming.length > 0 && (
+              <div className="mb-2">
+                <div className="text-[#5a7a5a] text-xs font-semibold uppercase tracking-wide px-2 mb-1">
+                  Запросы ({pendingIncoming.length})
+                </div>
+                {pendingIncoming.map((f) => (
+                  <div key={f.friendship_id} className="flex items-center gap-2 p-2 rounded bg-[#1f261f]">
+                    <div className="w-8 h-8 bg-[#2a4a2a] rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                      {f.user.display_name?.[0] || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm font-medium truncate">{f.user.display_name}</div>
+                      <div className="text-[#5a7a5a] text-xs">@{f.user.username}</div>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white w-7 h-7 p-0"
+                      onClick={() => acceptFriend(f.friendship_id)}
+                    >
+                      <Check className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {acceptedFriends.length === 0 && pendingIncoming.length === 0 && (
+              <div className="text-center text-[#5a7a5a] text-sm py-8 px-4">
+                <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p>Нет контактов</p>
+                <p className="text-xs mt-1">Нажмите + чтобы найти бойцов</p>
+              </div>
+            )}
+
+            {acceptedFriends.map((f) => (
+              <div
+                key={f.friendship_id}
+                className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                  activeChat?.friendship_id === f.friendship_id ? "bg-[#2a332a]" : "hover:bg-[#1f261f]"
+                }`}
+                onClick={() => openChat(f)}
+              >
+                <div className="w-9 h-9 bg-gradient-to-br from-green-700 to-green-500 rounded-full flex items-center justify-center text-sm font-bold text-white relative flex-shrink-0">
+                  {f.user.display_name?.[0] || "?"}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#4a7c4a] border-2 border-[#141914] rounded-full"></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white text-sm font-medium truncate">{f.user.display_name}</div>
+                  <div className="text-[#5a7a5a] text-xs truncate">@{f.user.username}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-2 bg-[#0f130f] flex items-center gap-2 border-t border-[#0a0d0a]">
+            <div className="w-8 h-8 bg-[#4a7c4a] rounded-full flex items-center justify-center text-sm font-bold text-white">
+              {authUser.display_name[0]}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white text-sm font-medium truncate">{authUser.display_name}</div>
+              <div className="text-[#5a7a5a] text-xs">@{authUser.username}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Область чата */}
+        <div className="flex-1 flex flex-col">
+          {activeChat ? (
+            <>
+              <div className="h-12 bg-[#1a1f1a] border-b border-[#0a0d0a] flex items-center px-4 gap-3">
+                <Button
+                  variant="ghost"
+                  className="sm:hidden text-[#5a7a5a] hover:text-white hover:bg-[#2a332a] p-1 mr-1"
+                  onClick={() => setMobileSidebarOpen(true)}
+                >
+                  <Menu className="w-5 h-5" />
+                </Button>
+                <div className="w-8 h-8 bg-gradient-to-br from-green-700 to-green-500 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+                  {activeChat.user.display_name?.[0]}
+                </div>
+                <div>
+                  <div className="text-white font-semibold text-sm">{activeChat.user.display_name}</div>
+                  <div className="text-[#5a7a5a] text-xs">@{activeChat.user.username}</div>
+                </div>
+                <div className="ml-auto flex items-center gap-1 text-[#4a7c4a] text-xs">
+                  <Shield className="w-3 h-3" />
+                  <span className="hidden sm:inline">Шифрование активно</span>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {messages.length === 0 && (
+                  <div className="text-center text-[#5a7a5a] text-sm py-12">
+                    <Lock className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                    <p>Начните защищённый диалог</p>
+                  </div>
+                )}
+                {messages.map((msg) => {
+                  const isMe = msg.sender_id === authUser.user_id;
+                  return (
+                    <div key={msg.id} className={`flex gap-3 ${isMe ? "flex-row-reverse" : ""}`}>
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${
+                          isMe ? "bg-[#4a7c4a]" : "bg-gradient-to-br from-green-700 to-green-500"
+                        }`}
+                      >
+                        {msg.display_name[0]}
+                      </div>
+                      <div className={`max-w-[70%] ${isMe ? "items-end" : "items-start"} flex flex-col`}>
+                        <div className="flex items-baseline gap-2 mb-1">
+                          {!isMe && <span className="text-white text-xs font-medium">{msg.display_name}</span>}
+                          <span className="text-[#5a7a5a] text-xs">{formatTime(msg.created_at)}</span>
+                        </div>
+                        <div
+                          className={`rounded-lg px-3 py-2 text-sm ${
+                            isMe ? "bg-[#2a4a2a] text-white" : "bg-[#141914] text-[#b0c4b0]"
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
+
+              <form onSubmit={sendMessage} className="p-3 border-t border-[#0a0d0a]">
+                <div className="flex gap-2">
+                  <input
+                    className="flex-1 bg-[#2a332a] rounded-lg px-4 py-2 text-white text-sm placeholder-[#5a7a5a] focus:outline-none focus:ring-1 focus:ring-[#4a7c4a]"
+                    placeholder={`Сообщение ${activeChat.user.display_name}...`}
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    disabled={sendingMsg || !messageText.trim()}
+                    className="bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white px-4 py-2 rounded-lg"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+              <Button
+                variant="ghost"
+                className="sm:hidden absolute top-16 left-4 text-[#5a7a5a] hover:text-white hover:bg-[#2a332a] p-2"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5" />
+              </Button>
+              <div className="w-20 h-20 bg-[#141914] rounded-full flex items-center justify-center mb-4">
+                <Radio className="w-10 h-10 text-[#4a7c4a]" />
+              </div>
+              <h2 className="text-white text-xl font-bold mb-2">Link</h2>
+              <p className="text-[#5a7a5a] text-sm max-w-sm">
+                Выберите контакт слева, чтобы начать защищённый диалог
+              </p>
+              <div className="flex items-center gap-2 mt-4 text-[#4a7c4a] text-xs">
+                <Shield className="w-3 h-3" />
+                <span>Все сообщения защищены шифрованием</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
-};
-
-export default Index;
+}
