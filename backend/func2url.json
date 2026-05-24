@@ -1,4 +1,6 @@
 {
+  "signal": "https://functions.poehali.dev/5f7bfb3f-7664-4e1e-aa94-20af798645a7",
+  "channels": "https://functions.poehali.dev/f35d98d7-e2b9-449e-9290-47e0fd517ec0",
   "friends": "https://functions.poehali.dev/c818513e-108b-491b-be7a-8ae1d7792675",
   "auth": "https://functions.poehali.dev/9f1f6cd4-ef39-4d6c-8aa9-a3b0fa392d42",
   "messages": "https://functions.poehali.dev/edca8417-913a-4596-b3b6-60b77e61e61d"
