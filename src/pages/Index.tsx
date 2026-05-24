@@ -95,7 +95,7 @@ const Index = () => {
             className={`${mobileSidebarOpen ? "block" : "hidden"} lg:block w-full lg:w-60 bg-[#141914] flex flex-col`}
           >
             <div className="p-4 border-b border-[#0a0d0a] flex items-center justify-between">
-              <h2 className="text-white font-semibold text-base">ТАКТИК — Штаб</h2>
+              <h2 className="text-white font-semibold text-base">Link — Штаб</h2>
               <Button
                 variant="ghost"
                 className="lg:hidden text-[#8a9e8a] hover:text-white hover:bg-[#2a332a] p-1"
@@ -191,16 +191,16 @@ const Index = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-white font-medium text-sm sm:text-base">ТАКТИК Система</span>
+                    <span className="text-white font-medium text-sm sm:text-base">Link Система</span>
                     <span className="bg-[#4a7c4a] text-white text-xs px-1 rounded">СИСТЕМА</span>
                     <span className="text-[#5a7a5a] text-xs hidden sm:inline">Сегодня в 00:00</span>
                   </div>
                   <div className="text-[#b0c4b0] text-sm sm:text-base">
                     <p className="mb-3 sm:mb-4">
-                      <strong>Добро пожаловать в ТАКТИК!</strong> Защищённый мессенджер для координации и оперативной связи.
+                      <strong>Добро пожаловать в Link!</strong> Защищённый мессенджер для координации и оперативной связи.
                     </p>
                     <div className="bg-[#141914] border-l-4 border-[#4a7c4a] p-3 sm:p-4 rounded">
-                      <h3 className="text-white font-semibold mb-2 text-sm sm:text-base">Возможности ТАКТИК:</h3>
+                      <h3 className="text-white font-semibold mb-2 text-sm sm:text-base">Возможности Link:</h3>
                       <ul className="space-y-1 text-xs sm:text-sm text-[#8a9e8a]">
                         <li>Сквозное шифрование всех сообщений и файлов</li>
                         <li>Голосовая и видеосвязь с защитой канала</li>
@@ -295,7 +295,7 @@ const Index = () => {
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="text-white font-semibold text-xs sm:text-sm mb-1">ТАКТИК</div>
+                            <div className="text-white font-semibold text-xs sm:text-sm mb-1">Link</div>
                             <div className="text-[#b0c4b0] text-xs sm:text-sm mb-1">Оперативный канал</div>
                             <div className="text-[#8a9e8a] text-xs sm:text-sm mb-2">Шифрование активно</div>
                             <div className="flex items-center gap-2">
@@ -321,7 +321,7 @@ const Index = () => {
                     <span className="text-[#5a7a5a] text-xs hidden sm:inline">Сегодня в 06:17</span>
                   </div>
                   <div className="text-[#b0c4b0] text-sm sm:text-base">
-                    Принял. Маршрут согласован, связь устойчивая. ТАКТИК работает даже в зоне с плохим сигналом.
+                    Принял. Маршрут согласован, связь устойчивая. Link работает даже в зоне с плохим сигналом.
                   </div>
                 </div>
               </div>
@@ -330,7 +330,7 @@ const Index = () => {
               <div className="bg-[#141914] border border-[#0a0d0a] rounded-lg p-4 sm:p-6 mt-6 sm:mt-8">
                 <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 flex items-center gap-2">
                   <Download className="w-5 h-5 sm:w-6 sm:h-6 text-[#4a7c4a]" />
-                  Подключиться к ТАКТИК
+                  Подключиться к Link
                 </h2>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
@@ -374,7 +374,7 @@ const Index = () => {
 
               {/* Преимущества */}
               <div className="bg-[#141914] border border-[#0a0d0a] rounded-lg p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Почему ТАКТИК?</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Почему Link?</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {[
                     {
@@ -434,7 +434,7 @@ const Index = () => {
                     color: "from-green-700 to-green-500",
                   },
                   { name: "Сержант Иванов", status: "На дежурстве", avatar: "С", color: "from-yellow-700 to-yellow-500" },
-                  { name: "Командир", status: "Разворачивает ТАКТИК", avatar: "К", color: "from-green-800 to-green-600" },
+                  { name: "Командир", status: "Разворачивает Link", avatar: "К", color: "from-green-800 to-green-600" },
                 ].map((user, index) => (
                   <div key={index} className="flex items-center gap-3 p-2 rounded hover:bg-[#1a1f1a] cursor-pointer">
                     <div
