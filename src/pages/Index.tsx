@@ -33,7 +33,7 @@ const Index = () => {
               <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">ТАКТИК</h1>
+              <h1 className="text-lg sm:text-xl font-bold text-white">Link</h1>
               <p className="text-xs text-[#8a9e8a] hidden sm:block">Защищённый мессенджер для военных</p>
             </div>
           </div>
