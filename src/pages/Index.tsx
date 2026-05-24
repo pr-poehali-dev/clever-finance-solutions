@@ -305,35 +305,138 @@ export default function Index() {
 
   // ---------- AUTH SCREEN ----------
   if (!authUser) return (
-    <div className="min-h-screen bg-[#1a1f1a] flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 bg-[#4a7c4a] rounded-full flex items-center justify-center"><Radio className="w-6 h-6 text-white" /></div>
-          <h1 className="text-3xl font-bold text-white">Link</h1>
+    <div className="min-h-screen bg-[#0f130f] flex overflow-hidden">
+      {/* Левая панель — брендинг */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#141914] to-[#0a0d0a] flex-col items-center justify-center p-12 relative overflow-hidden">
+        {/* Декоративная сетка */}
+        <div className="absolute inset-0 opacity-5" style={{backgroundImage:"repeating-linear-gradient(0deg,#4a7c4a 0,#4a7c4a 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,#4a7c4a 0,#4a7c4a 1px,transparent 1px,transparent 40px)"}} />
+        {/* Декоративные круги */}
+        <div className="absolute top-[-80px] left-[-80px] w-80 h-80 bg-[#4a7c4a] opacity-10 rounded-full" />
+        <div className="absolute bottom-[-60px] right-[-60px] w-64 h-64 bg-[#4a7c4a] opacity-10 rounded-full" />
+
+        <div className="relative z-10 text-center">
+          <div className="w-24 h-24 bg-[#4a7c4a] rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <Radio className="w-12 h-12 text-white" />
+          </div>
+          <h1 className="text-5xl font-black text-white mb-3 tracking-tight">Link</h1>
+          <p className="text-[#8a9e8a] text-lg mb-10">Защищённый мессенджер для военных</p>
+
+          <div className="space-y-4 text-left">
+            {[
+              { icon: <Lock className="w-4 h-4" />, text: "Сквозное шифрование AES-256" },
+              { icon: <Shield className="w-4 h-4" />, text: "Закрытые каналы по приглашению" },
+              { icon: <Monitor className="w-4 h-4" />, text: "Видеосвязь и демонстрация экрана" },
+              { icon: <Users className="w-4 h-4" />, text: "Личные чаты и групповые каналы" },
+            ].map((f, i) => (
+              <div key={i} className="flex items-center gap-3 text-[#8a9e8a]">
+                <div className="w-8 h-8 bg-[#1f261f] rounded-lg flex items-center justify-center text-[#4a7c4a] flex-shrink-0">{f.icon}</div>
+                <span className="text-sm">{f.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="bg-[#141914] border border-[#0a0d0a] rounded-xl p-6">
-          <div className="flex gap-2 mb-6">
+      </div>
+
+      {/* Правая панель — форма */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12">
+        {/* Лого для мобильных */}
+        <div className="lg:hidden flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 bg-[#4a7c4a] rounded-xl flex items-center justify-center"><Radio className="w-5 h-5 text-white" /></div>
+          <h1 className="text-2xl font-black text-white">Link</h1>
+        </div>
+
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <h2 className="text-white text-2xl font-bold mb-1">
+              {authMode === "login" ? "Добро пожаловать" : "Создать аккаунт"}
+            </h2>
+            <p className="text-[#5a7a5a] text-sm">
+              {authMode === "login" ? "Войдите в защищённый контур Link" : "Зарегистрируйтесь для доступа к Link"}
+            </p>
+          </div>
+
+          {/* Переключатель */}
+          <div className="flex bg-[#141914] rounded-xl p-1 mb-6">
             {(["login","register"] as const).map(m => (
-              <button key={m} className={`flex-1 py-2 rounded text-sm font-medium transition-colors ${authMode === m ? "bg-[#4a7c4a] text-white" : "text-[#8a9e8a] hover:text-white"}`} onClick={() => setAuthMode(m)}>
+              <button key={m} className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${authMode === m ? "bg-[#4a7c4a] text-white shadow-lg" : "text-[#5a7a5a] hover:text-[#8a9e8a]"}`} onClick={() => { setAuthMode(m); setAuthError(""); }}>
                 {m === "login" ? "Вход" : "Регистрация"}
               </button>
             ))}
           </div>
+
           <form onSubmit={handleAuth} className="space-y-4">
             {authMode === "register" && (
-              <div><label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Имя</label>
-                <input className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]" placeholder="Ваше имя" value={authForm.display_name} onChange={e => setAuthForm({...authForm, display_name: e.target.value})} /></div>
+              <div>
+                <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wider block mb-2">Имя и фамилия</label>
+                <input
+                  className="w-full bg-[#141914] border border-[#2a332a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#3a4a3a] focus:outline-none focus:border-[#4a7c4a] focus:ring-1 focus:ring-[#4a7c4a] transition-colors"
+                  placeholder="Иванов Иван"
+                  value={authForm.display_name}
+                  onChange={e => setAuthForm({...authForm, display_name: e.target.value})}
+                  required
+                />
+              </div>
             )}
-            <div><label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Никнейм</label>
-              <input className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]" placeholder="@никнейм" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} /></div>
-            <div><label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wide block mb-1">Пароль</label>
-              <input type="password" className="w-full bg-[#0f130f] border border-[#2a332a] rounded px-3 py-2 text-white text-sm focus:outline-none focus:border-[#4a7c4a]" placeholder="••••••••" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} /></div>
-            {authError && <p className="text-red-400 text-sm">{authError}</p>}
-            <Button type="submit" disabled={authLoading} className="w-full bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white py-2 rounded font-medium">
-              {authLoading ? "..." : authMode === "login" ? "Войти" : "Создать аккаунт"}
+
+            <div>
+              <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wider block mb-2">Позывной / Никнейм</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3a5a3a] text-sm font-medium">@</span>
+                <input
+                  className="w-full bg-[#141914] border border-[#2a332a] rounded-xl pl-8 pr-4 py-3 text-white text-sm placeholder-[#3a4a3a] focus:outline-none focus:border-[#4a7c4a] focus:ring-1 focus:ring-[#4a7c4a] transition-colors"
+                  placeholder="pozyvnoy"
+                  value={authForm.username}
+                  onChange={e => setAuthForm({...authForm, username: e.target.value.toLowerCase().replace(/\s/g,"")})}
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[#8a9e8a] text-xs font-semibold uppercase tracking-wider block mb-2">Пароль</label>
+              <input
+                type="password"
+                className="w-full bg-[#141914] border border-[#2a332a] rounded-xl px-4 py-3 text-white text-sm placeholder-[#3a4a3a] focus:outline-none focus:border-[#4a7c4a] focus:ring-1 focus:ring-[#4a7c4a] transition-colors"
+                placeholder={authMode === "register" ? "Минимум 6 символов" : "Введите пароль"}
+                value={authForm.password}
+                onChange={e => setAuthForm({...authForm, password: e.target.value})}
+                required
+              />
+            </div>
+
+            {authError && (
+              <div className="bg-red-900/30 border border-red-800/50 rounded-xl px-4 py-3 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-red-400 text-sm">{authError}</p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-[#4a7c4a] hover:bg-[#3a6a3a] text-white py-3 rounded-xl font-semibold text-sm transition-all duration-200 mt-2"
+            >
+              {authLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Подключение...
+                </span>
+              ) : authMode === "login" ? "Войти в Link" : "Создать аккаунт"}
             </Button>
           </form>
-          <div className="flex items-center gap-2 mt-4 text-[#5a7a5a] text-xs"><Lock className="w-3 h-3" /><span>Защищённое соединение</span></div>
+
+          <div className="flex items-center justify-center gap-2 mt-6 text-[#3a5a3a] text-xs">
+            <Lock className="w-3 h-3" />
+            <span>Данные защищены военным стандартом шифрования</span>
+          </div>
+
+          <div className="mt-4 text-center text-[#3a5a3a] text-xs">
+            {authMode === "login" ? (
+              <span>Нет аккаунта? <button className="text-[#4a7c4a] hover:text-[#6a9c6a] font-medium" onClick={() => { setAuthMode("register"); setAuthError(""); }}>Зарегистрироваться</button></span>
+            ) : (
+              <span>Уже есть аккаунт? <button className="text-[#4a7c4a] hover:text-[#6a9c6a] font-medium" onClick={() => { setAuthMode("login"); setAuthError(""); }}>Войти</button></span>
+            )}
+          </div>
         </div>
       </div>
     </div>
