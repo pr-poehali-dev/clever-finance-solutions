@@ -62,7 +62,9 @@ export default function Index() {
   const [showAddFriend, setShowAddFriend] = useState(false);
 
   const [activeChat, setActiveChat] = useState<Friend | null>(null);
+  const activeChatRef = useRef<Friend | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const lastMessageCountRef = useRef(0);
   const [messageText, setMessageText] = useState("");
   const [sendingMsg, setSendingMsg] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,24 @@ export default function Index() {
     if (authUser) loadFriends();
   }, [authUser]);
 
+  // Автообновление чата каждые 3 секунды
+  useEffect(() => {
+    if (!authUser) return;
+    const interval = setInterval(async () => {
+      const chat = activeChatRef.current;
+      if (!chat) return;
+      const friendId = chat.user.id;
+      const res = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${friendId}`);
+      const data: Message[] = await res.json();
+      if (data.length !== lastMessageCountRef.current) {
+        lastMessageCountRef.current = data.length;
+        setMessages(data);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [authUser]);
+
   const handleSearch = async () => {
     if (!searchQuery.trim() || !authUser) return;
     setSearchLoading(true);
@@ -145,11 +165,13 @@ export default function Index() {
 
   const openChat = async (friend: Friend) => {
     setActiveChat(friend);
+    activeChatRef.current = friend;
     setMobileSidebarOpen(false);
     if (!authUser) return;
-    const friendId = friend.user.id || (friend as unknown as { user: { id: number } }).user.id;
+    const friendId = friend.user.id;
     const res = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${friendId}`);
-    const data = await res.json();
+    const data: Message[] = await res.json();
+    lastMessageCountRef.current = data.length;
     setMessages(data);
     setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
   };
