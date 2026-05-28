@@ -3,10 +3,11 @@ import {
   Shield, Radio, Users, Mic, MicOff, Menu, X, Send,
   UserPlus, Check, LogOut, Lock, Video, VideoOff, Monitor, Hash,
   Plus, Copy, PhoneOff, Tv2, Settings, ChevronDown,
-  ChevronRight, Smile, Headphones, HeadphoneOff, Volume2,
+  ChevronRight, Smile, Headphones, HeadphoneOff, Volume2, Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import VoiceChannel from "@/components/VoiceChannel";
+import ScreenViewer from "@/components/ScreenViewer";
 
 const AUTH_URL     = "https://functions.poehali.dev/9f1f6cd4-ef39-4d6c-8aa9-a3b0fa392d42";
 const FRIENDS_URL  = "https://functions.poehali.dev/c818513e-108b-491b-be7a-8ae1d7792675";
@@ -68,6 +69,7 @@ export default function Index() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [activeVoiceChannel, setActiveVoiceChannel] = useState<Channel | null>(null);
+  const [viewingChannel, setViewingChannel] = useState<Channel | null>(null);
 
   // ── Friends ──
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -583,28 +585,45 @@ export default function Index() {
                       {collapsedCategories[cat] ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}{cat}
                     </button>
                     {!collapsedCategories[cat] && chs.map(ch => (
-                      <button key={ch.id}
-                        onClick={() => {
-                          if (ch.type === "voice") {
-                            setActiveVoiceChannel(ch); setActiveView(null); activeChatRef.current = null; setMobileSidebarOpen(false);
-                          } else {
-                            openView({ type: "channel", channel: ch }); setActiveVoiceChannel(null);
-                          }
-                        }}
-                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors group ${
-                          activeVoiceChannel?.id === ch.id ? "bg-[#2a4a2a] text-[#4a7c4a]"
-                          : activeView?.type === "channel" && activeView.channel.id === ch.id ? "bg-[#35373c] text-white"
-                          : "text-[#8a9e8a] hover:text-white hover:bg-[#35373c]"
-                        }`}>
-                        {ch.type === "voice"
-                          ? <Volume2 className={`w-4 h-4 flex-shrink-0 ${activeVoiceChannel?.id === ch.id ? "text-[#4a7c4a]" : ""}`} />
-                          : <Hash className="w-4 h-4 flex-shrink-0" />}
-                        <span className="text-sm truncate">{ch.name}</span>
-                        {ch.type === "voice" && activeVoiceChannel?.id === ch.id && (
-                          <span className="ml-auto flex items-center gap-1 text-[#4a7c4a] text-xs"><div className="w-1.5 h-1.5 bg-[#4a7c4a] rounded-full animate-pulse" />В эфире</span>
+                      <div key={ch.id} className="group relative">
+                        <button
+                          onClick={() => {
+                            if (ch.type === "voice") {
+                              setActiveVoiceChannel(ch); setViewingChannel(null);
+                              setActiveView(null); activeChatRef.current = null; setMobileSidebarOpen(false);
+                            } else {
+                              openView({ type: "channel", channel: ch }); setActiveVoiceChannel(null); setViewingChannel(null);
+                            }
+                          }}
+                          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors ${
+                            activeVoiceChannel?.id === ch.id ? "bg-[#2a4a2a] text-[#4a7c4a]"
+                            : viewingChannel?.id === ch.id ? "bg-[#1a2a3a] text-purple-400"
+                            : activeView?.type === "channel" && activeView.channel.id === ch.id ? "bg-[#35373c] text-white"
+                            : "text-[#8a9e8a] hover:text-white hover:bg-[#35373c]"
+                          }`}>
+                          {ch.type === "voice"
+                            ? <Volume2 className={`w-4 h-4 flex-shrink-0 ${activeVoiceChannel?.id === ch.id ? "text-[#4a7c4a]" : viewingChannel?.id === ch.id ? "text-purple-400" : ""}`} />
+                            : <Hash className="w-4 h-4 flex-shrink-0" />}
+                          <span className="text-sm truncate">{ch.name}</span>
+                          {ch.type === "voice" && activeVoiceChannel?.id === ch.id && (
+                            <span className="ml-auto flex items-center gap-1 text-[#4a7c4a] text-xs"><div className="w-1.5 h-1.5 bg-[#4a7c4a] rounded-full animate-pulse" />В эфире</span>
+                          )}
+                          {ch.type === "voice" && viewingChannel?.id === ch.id && activeVoiceChannel?.id !== ch.id && (
+                            <span className="ml-auto flex items-center gap-1 text-purple-400 text-xs"><Eye className="w-3 h-3" />Смотрю</span>
+                          )}
+                          {ch.type !== "voice" && <span className="ml-auto text-[#5a7a5a] text-xs opacity-0 group-hover:opacity-100">{ch.member_count}</span>}
+                        </button>
+                        {/* Кнопка "Смотреть" для голосовых каналов */}
+                        {ch.type === "voice" && activeVoiceChannel?.id !== ch.id && (
+                          <button
+                            onClick={e => { e.stopPropagation(); setViewingChannel(ch); setActiveVoiceChannel(null); setActiveView(null); activeChatRef.current = null; setMobileSidebarOpen(false); }}
+                            title="Смотреть трансляции"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-1 px-1.5 py-0.5 bg-purple-600/80 hover:bg-purple-600 text-white rounded text-xs font-semibold transition-all"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
                         )}
-                        {ch.type !== "voice" && <span className="ml-auto text-[#5a7a5a] text-xs opacity-0 group-hover:opacity-100">{ch.member_count}</span>}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 ))}
@@ -690,6 +709,15 @@ export default function Index() {
               channelName={activeVoiceChannel.name}
               authUser={{ user_id: authUser.user_id, display_name: authUser.display_name, avatar_color: authUser.avatar_color }}
               onLeave={() => setActiveVoiceChannel(null)}
+            />
+          ) : viewingChannel ? (
+            /* ПРОСМОТР ТРАНСЛЯЦИЙ */
+            <ScreenViewer
+              key={viewingChannel.id}
+              channelId={viewingChannel.id}
+              channelName={viewingChannel.name}
+              authUser={{ user_id: authUser.user_id, display_name: authUser.display_name, avatar_color: authUser.avatar_color }}
+              onClose={() => setViewingChannel(null)}
             />
           ) : activeView ? (
             /* ТЕКСТОВЫЙ ЧАТА */
