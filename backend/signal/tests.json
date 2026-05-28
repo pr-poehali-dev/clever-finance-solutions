@@ -1,11 +1,11 @@
 {
   "tests": [
     {
-      "name": "Not found",
+      "name": "Poll empty",
       "method": "GET",
-      "path": "/",
-      "expectedStatus": 404,
-      "expectedBody": {"error": "Not found"},
+      "path": "/?action=poll&room_id=test&user_id=0&since_id=0",
+      "expectedStatus": 200,
+      "expectedBody": [],
       "bodyMatcher": "partial"
     }
   ]

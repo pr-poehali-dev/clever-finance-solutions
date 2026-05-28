@@ -1,11 +1,11 @@
 {
   "tests": [
     {
-      "name": "Not found route",
+      "name": "Search users empty",
       "method": "GET",
-      "path": "/",
-      "expectedStatus": 404,
-      "expectedBody": {"error": "Not found"},
+      "path": "/?action=search&q=nobody&user_id=0",
+      "expectedStatus": 200,
+      "expectedBody": [],
       "bodyMatcher": "partial"
     }
   ]

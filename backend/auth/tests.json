@@ -1,12 +1,12 @@
 {
   "tests": [
     {
-      "name": "Login wrong credentials",
+      "name": "Register new user",
       "method": "POST",
       "path": "/",
-      "body": {"username": "nobody", "password": "wrong"},
-      "expectedStatus": 404,
-      "expectedBody": {"error": "Not found"},
+      "body": {"action": "register", "username": "testlink999", "display_name": "Тест Юзер", "password": "test123"},
+      "expectedStatus": 200,
+      "expectedBody": {"username": "testlink999"},
       "bodyMatcher": "partial"
     }
   ]

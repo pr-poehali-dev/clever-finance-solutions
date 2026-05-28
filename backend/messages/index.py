@@ -6,30 +6,27 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 def handler(event: dict, context) -> dict:
-    """Отправка и получение сообщений в личных чатах"""
+    """Личные сообщения: history и send через action в query/body."""
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, X-User-Id, X-Auth-Token, X-Session-Id"}, "body": ""}
 
     headers = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
-    path = event.get("path", "")
     method = event.get("httpMethod", "")
     params = event.get("queryStringParameters") or {}
     body = json.loads(event.get("body") or "{}")
+    action = params.get("action") or body.get("action", "")
 
     conn = get_conn()
     cur = conn.cursor()
 
-    # Получить историю чата
-    if path.endswith("/history") and method == "GET":
-        user_id = int(params.get("user_id", 0))
-        friend_id = int(params.get("friend_id", 0))
+    if action == "history":
+        user_id = int(params.get("user_id") or body.get("user_id") or 0)
+        friend_id = int(params.get("friend_id") or body.get("friend_id") or 0)
         cur.execute("""
             SELECT m.id, m.sender_id, m.content, m.created_at, u.display_name
-            FROM messages m
-            JOIN users u ON u.id = m.sender_id
-            WHERE (m.sender_id = %s AND m.receiver_id = %s) OR (m.sender_id = %s AND m.receiver_id = %s)
-            ORDER BY m.created_at ASC
-            LIMIT 100
+            FROM messages m JOIN users u ON u.id = m.sender_id
+            WHERE (m.sender_id=%s AND m.receiver_id=%s) OR (m.sender_id=%s AND m.receiver_id=%s)
+            ORDER BY m.created_at ASC LIMIT 100
         """, (user_id, friend_id, friend_id, user_id))
         rows = cur.fetchall()
         conn.close()
@@ -38,8 +35,7 @@ def handler(event: dict, context) -> dict:
             for r in rows
         ])}
 
-    # Отправить сообщение
-    if path.endswith("/send") and method == "POST":
+    if action == "send" and method == "POST":
         sender_id = body.get("sender_id")
         receiver_id = body.get("receiver_id")
         content = body.get("content", "").strip()
@@ -53,4 +49,4 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": headers, "body": json.dumps({"id": row[0], "created_at": row[1].isoformat()})}
 
     conn.close()
-    return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Not found"})}
+    return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Неизвестное действие"})}

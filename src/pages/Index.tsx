@@ -105,7 +105,7 @@ export default function Index() {
   const saveUser = (u: AuthUser) => { setAuthUser(u); localStorage.setItem("link_user", JSON.stringify(u)); };
 
   const logout = useCallback(async () => {
-    if (authUser) await fetch(`${AUTH_URL}/logout`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id }) });
+    if (authUser) await fetch(AUTH_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout", user_id: authUser.user_id }) });
     stopCall();
     setAuthUser(null); localStorage.removeItem("link_user");
     setFriends([]); setChannels([]); setActiveView(null); setMessages([]);
@@ -116,10 +116,13 @@ export default function Index() {
     setAuthError("");
     setAuthLoading(true);
     try {
-      const path = authMode === "login" ? "/login" : "/register";
-      const body: Record<string, string> = { username: authForm.username, password: authForm.password };
+      const body: Record<string, string> = {
+        action: authMode,
+        username: authForm.username,
+        password: authForm.password,
+      };
       if (authMode === "register") body.display_name = authForm.display_name;
-      const res = await fetch(`${AUTH_URL}${path}`, {
+      const res = await fetch(AUTH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -144,48 +147,48 @@ export default function Index() {
 
   const updateStatus = async (status: string) => {
     if (!authUser) return;
-    await fetch(`${AUTH_URL}/profile`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id, status }) });
+    await fetch(AUTH_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "profile", user_id: authUser.user_id, status }) });
     saveUser({ ...authUser, status });
   };
 
   // ─── FRIENDS ────────────────────────────────────────────
   const loadFriends = useCallback(async () => {
     if (!authUser) return;
-    const res = await fetch(`${FRIENDS_URL}/list?user_id=${authUser.user_id}`);
+    const res = await fetch(`${FRIENDS_URL}?action=list&user_id=${authUser.user_id}`);
     setFriends(await res.json());
   }, [authUser]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim() || !authUser) return;
-    const res = await fetch(`${FRIENDS_URL}/search?q=${encodeURIComponent(searchQuery)}&user_id=${authUser.user_id}`);
+    const res = await fetch(`${FRIENDS_URL}?action=search&q=${encodeURIComponent(searchQuery)}&user_id=${authUser.user_id}`);
     setSearchResults(await res.json());
   };
   const sendFriendReq = async (targetId: number) => {
     if (!authUser) return;
-    await fetch(`${FRIENDS_URL}/request`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id, target_id: targetId }) });
+    await fetch(FRIENDS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "request", user_id: authUser.user_id, target_id: targetId }) });
     setSearchResults([]); setSearchQuery(""); loadFriends();
   };
   const acceptFriend = async (fid: number) => {
     if (!authUser) return;
-    await fetch(`${FRIENDS_URL}/accept`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id, friendship_id: fid }) });
+    await fetch(FRIENDS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "accept", user_id: authUser.user_id, friendship_id: fid }) });
     loadFriends();
   };
 
   // ─── CHANNELS ───────────────────────────────────────────
   const loadChannels = useCallback(async () => {
     if (!authUser) return;
-    const res = await fetch(`${CHANNELS_URL}/list?user_id=${authUser.user_id}`);
+    const res = await fetch(`${CHANNELS_URL}?action=list&user_id=${authUser.user_id}`);
     setChannels(await res.json());
   }, [authUser]);
 
   const createChannel = async (e: React.FormEvent) => {
     e.preventDefault(); if (!authUser || !channelForm.name.trim()) return;
-    await fetch(`${CHANNELS_URL}/create`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id, ...channelForm }) });
+    await fetch(CHANNELS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create", user_id: authUser.user_id, ...channelForm }) });
     setChannelForm({ name: "", description: "", type: "text" }); setShowCreateChannel(false); loadChannels();
   };
   const joinChannel = async (e: React.FormEvent) => {
     e.preventDefault(); if (!authUser || !joinCode.trim()) return;
-    await fetch(`${CHANNELS_URL}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: authUser.user_id, invite_code: joinCode }) });
+    await fetch(CHANNELS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join", user_id: authUser.user_id, invite_code: joinCode }) });
     setJoinCode(""); setShowJoin(false); loadChannels();
   };
   const copyCode = (code: string) => { navigator.clipboard.writeText(code); setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000); };
@@ -194,8 +197,8 @@ export default function Index() {
   const loadMessages = useCallback(async (view: ChatView) => {
     if (!authUser || !view) return;
     let res: Response;
-    if (view.type === "dm") res = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${view.friend.user.id}`);
-    else res = await fetch(`${CHANNELS_URL}/history?channel_id=${view.channel.id}`);
+    if (view.type === "dm") res = await fetch(`${MESSAGES_URL}?action=history&user_id=${authUser.user_id}&friend_id=${view.friend.user.id}`);
+    else res = await fetch(`${CHANNELS_URL}?action=history&channel_id=${view.channel.id}`);
     const data: Message[] = await res.json();
     lastMsgCountRef.current = data.length;
     setMessages(data);
@@ -212,8 +215,8 @@ export default function Index() {
     e.preventDefault();
     if (!messageText.trim() || !authUser || !activeView) return;
     setSendingMsg(true);
-    if (activeView.type === "dm") await fetch(`${MESSAGES_URL}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sender_id: authUser.user_id, receiver_id: activeView.friend.user.id, content: messageText }) });
-    else await fetch(`${CHANNELS_URL}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel_id: activeView.channel.id, sender_id: authUser.user_id, content: messageText }) });
+    if (activeView.type === "dm") await fetch(MESSAGES_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", sender_id: authUser.user_id, receiver_id: activeView.friend.user.id, content: messageText }) });
+    else await fetch(CHANNELS_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", channel_id: activeView.channel.id, sender_id: authUser.user_id, content: messageText }) });
     setMessageText(""); await loadMessages(activeView); setSendingMsg(false);
   };
 
@@ -238,9 +241,9 @@ export default function Index() {
     };
     pc.onicecandidate = async ev => {
       if (!ev.candidate || !authUser) return;
-      await fetch(`${SIGNAL_URL}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room_id: roomIdRef.current, sender_id: authUser.user_id, target_id: targetId, signal_type: "ice", payload: ev.candidate }) });
+      await fetch(SIGNAL_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", room_id: roomIdRef.current, sender_id: authUser.user_id, target_id: targetId, signal_type: "ice", payload: ev.candidate }) });
     };
-    if (initiator) pc.createOffer().then(o => { pc.setLocalDescription(o); fetch(`${SIGNAL_URL}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room_id: roomIdRef.current, sender_id: authUser!.user_id, target_id: targetId, signal_type: "offer", payload: o }) }); });
+    if (initiator) pc.createOffer().then(o => { pc.setLocalDescription(o); fetch(SIGNAL_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", room_id: roomIdRef.current, sender_id: authUser!.user_id, target_id: targetId, signal_type: "offer", payload: o }) }); });
     return pc;
   }, [authUser]);
 
@@ -253,10 +256,10 @@ export default function Index() {
     if (localVideoRef.current) localVideoRef.current.srcObject = stream;
     const roomId = getRoomId(activeView); roomIdRef.current = roomId;
     setInCall(true); setCallMode(mode);
-    await fetch(`${SIGNAL_URL}/join`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room_id: roomId, sender_id: authUser.user_id }) });
+    await fetch(SIGNAL_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "join", room_id: roomId, sender_id: authUser.user_id }) });
     lastSignalIdRef.current = 0;
     signalPollRef.current = setInterval(async () => {
-      const res = await fetch(`${SIGNAL_URL}/poll?room_id=${roomId}&user_id=${authUser.user_id}&since_id=${lastSignalIdRef.current}`);
+      const res = await fetch(`${SIGNAL_URL}?action=poll&room_id=${roomId}&user_id=${authUser.user_id}&since_id=${lastSignalIdRef.current}`);
       const sigs = await res.json();
       for (const s of sigs) {
         lastSignalIdRef.current = Math.max(lastSignalIdRef.current, s.id);
@@ -266,7 +269,7 @@ export default function Index() {
           let pc = peerConnsRef.current[s.sender_id]; if (!pc) pc = createPeer(s.sender_id, false, st);
           await pc.setRemoteDescription(new RTCSessionDescription(s.payload));
           const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
-          await fetch(`${SIGNAL_URL}/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room_id: roomId, sender_id: authUser.user_id, target_id: s.sender_id, signal_type: "answer", payload: ans }) });
+          await fetch(SIGNAL_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "send", room_id: roomId, sender_id: authUser.user_id, target_id: s.sender_id, signal_type: "answer", payload: ans }) });
         } else if (s.signal_type === "answer") { const pc = peerConnsRef.current[s.sender_id]; if (pc) await pc.setRemoteDescription(new RTCSessionDescription(s.payload)); }
         else if (s.signal_type === "ice") { const pc = peerConnsRef.current[s.sender_id]; if (pc) await pc.addIceCandidate(new RTCIceCandidate(s.payload)); }
         else if (s.signal_type === "leave") { peerConnsRef.current[s.sender_id]?.close(); delete peerConnsRef.current[s.sender_id]; setRemoteStreams(prev => prev.filter(r => r.userId !== s.sender_id)); }
@@ -279,7 +282,7 @@ export default function Index() {
     localStreamRef.current?.getTracks().forEach(t => t.stop()); localStreamRef.current = null;
     Object.values(peerConnsRef.current).forEach(pc => pc.close()); peerConnsRef.current = {};
     setRemoteStreams([]); setInCall(false); setCallMode(null);
-    if (authUser && roomIdRef.current) await fetch(`${SIGNAL_URL}/leave`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ room_id: roomIdRef.current, sender_id: authUser.user_id }) });
+    if (authUser && roomIdRef.current) await fetch(SIGNAL_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "leave", room_id: roomIdRef.current, sender_id: authUser.user_id }) });
   }, [authUser]);
 
   const toggleMic = () => { localStreamRef.current?.getAudioTracks().forEach(t => { t.enabled = !t.enabled; }); setMicOn(p => !p); };
@@ -293,8 +296,8 @@ export default function Index() {
     const iv = setInterval(async () => {
       const view = activeChatRef.current; if (!view) return;
       let res: Response;
-      if (view.type === "dm") res = await fetch(`${MESSAGES_URL}/history?user_id=${authUser.user_id}&friend_id=${view.friend.user.id}`);
-      else res = await fetch(`${CHANNELS_URL}/history?channel_id=${view.channel.id}`);
+      if (view.type === "dm") res = await fetch(`${MESSAGES_URL}?action=history&user_id=${authUser.user_id}&friend_id=${view.friend.user.id}`);
+      else res = await fetch(`${CHANNELS_URL}?action=history&channel_id=${view.channel.id}`);
       const data: Message[] = await res.json();
       if (data.length !== lastMsgCountRef.current) { lastMsgCountRef.current = data.length; setMessages(data); setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 80); }
     }, 3000);
@@ -791,9 +794,10 @@ export default function Index() {
         )}
       </div>
 
+      </div>
+
       {/* Мобильный оверлей */}
       {mobileSidebarOpen && <div className="sm:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileSidebarOpen(false)} />}
-      </div>
     </div>
   );
 }

@@ -13,26 +13,28 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 def handler(event: dict, context) -> dict:
-    """Регистрация, вход, профиль пользователей Link"""
+    """Регистрация, вход, профиль пользователей Link. Action передаётся в body."""
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, X-User-Id, X-Auth-Token, X-Session-Id"}, "body": ""}
 
     headers = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
-    path = event.get("path", "")
     method = event.get("httpMethod", "")
     body = json.loads(event.get("body") or "{}")
-    params = event.get("queryStringParameters") or {}
+    action = body.get("action", "")
 
     conn = get_conn()
     cur = conn.cursor()
 
-    if path.endswith("/register") and method == "POST":
+    if action == "register" and method == "POST":
         username = body.get("username", "").strip().lower()
         display_name = body.get("display_name", "").strip()
         password = body.get("password", "")
         if not username or not password or not display_name:
             conn.close()
             return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Заполните все поля"})}
+        if len(password) < 6:
+            conn.close()
+            return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Пароль минимум 6 символов"})}
         cur.execute("SELECT id FROM users WHERE username = %s", (username,))
         if cur.fetchone():
             conn.close()
@@ -47,9 +49,13 @@ def handler(event: dict, context) -> dict:
         cur.execute("INSERT INTO user_sessions (user_id, token) VALUES (%s, %s)", (user_id, token))
         conn.commit()
         conn.close()
-        return {"statusCode": 200, "headers": headers, "body": json.dumps({"user_id": user_id, "token": token, "username": username, "display_name": display_name, "avatar_color": color, "status": "online"})}
+        return {"statusCode": 200, "headers": headers, "body": json.dumps({
+            "user_id": user_id, "token": token,
+            "username": username, "display_name": display_name,
+            "avatar_color": color, "status": "online", "bio": ""
+        })}
 
-    if path.endswith("/login") and method == "POST":
+    if action == "login" and method == "POST":
         username = body.get("username", "").strip().lower()
         password = body.get("password", "")
         cur.execute("SELECT id, display_name, avatar_color, bio FROM users WHERE username = %s AND password_hash = %s", (username, hash_password(password)))
@@ -62,9 +68,13 @@ def handler(event: dict, context) -> dict:
         cur.execute("UPDATE users SET status='online' WHERE id=%s", (row[0],))
         conn.commit()
         conn.close()
-        return {"statusCode": 200, "headers": headers, "body": json.dumps({"user_id": row[0], "token": token, "username": username, "display_name": row[1], "avatar_color": row[2] or "#4a7c4a", "bio": row[3] or "", "status": "online"})}
+        return {"statusCode": 200, "headers": headers, "body": json.dumps({
+            "user_id": row[0], "token": token,
+            "username": username, "display_name": row[1],
+            "avatar_color": row[2] or "#4a7c4a", "bio": row[3] or "", "status": "online"
+        })}
 
-    if path.endswith("/profile") and method == "POST":
+    if action == "profile" and method == "POST":
         user_id = body.get("user_id")
         status = body.get("status")
         bio = body.get("bio")
@@ -76,7 +86,7 @@ def handler(event: dict, context) -> dict:
         conn.close()
         return {"statusCode": 200, "headers": headers, "body": json.dumps({"ok": True})}
 
-    if path.endswith("/logout") and method == "POST":
+    if action == "logout" and method == "POST":
         user_id = body.get("user_id")
         cur.execute("UPDATE users SET status='offline' WHERE id=%s", (user_id,))
         conn.commit()
@@ -84,4 +94,4 @@ def handler(event: dict, context) -> dict:
         return {"statusCode": 200, "headers": headers, "body": json.dumps({"ok": True})}
 
     conn.close()
-    return {"statusCode": 404, "headers": headers, "body": json.dumps({"error": "Not found"})}
+    return {"statusCode": 400, "headers": headers, "body": json.dumps({"error": "Неизвестное действие"})}
