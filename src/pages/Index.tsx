@@ -43,6 +43,23 @@ export default function Index() {
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
+  // PWA install prompt
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => { e.preventDefault(); setInstallPrompt(e); setShowInstallBanner(true); };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === "accepted") { setShowInstallBanner(false); setInstallPrompt(null); }
+  };
+
   const [tab, setTab] = useState<"friends" | "channels">("friends");
   const [activeView, setActiveView] = useState<ChatView>(null);
   const activeChatRef = useRef<ChatView>(null);
@@ -362,8 +379,19 @@ export default function Index() {
 
   // ─── MAIN APP ────────────────────────────────────────────
   return (
-    <div className="h-screen bg-[#1e2124] text-white flex overflow-hidden">
+    <div className="h-screen bg-[#1e2124] text-white flex flex-col overflow-hidden">
 
+      {/* ── PWA Install Banner ── */}
+      {showInstallBanner && (
+        <div className="flex-shrink-0 bg-[#4a7c4a] px-4 py-2 flex items-center gap-3 z-50">
+          <img src="https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg" className="w-8 h-8 rounded-lg flex-shrink-0" alt="Link" />
+          <span className="flex-1 text-white text-sm font-medium">Установить Link как приложение на Android</span>
+          <button onClick={handleInstall} className="bg-white text-[#4a7c4a] px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-gray-100 transition-colors flex-shrink-0">Установить</button>
+          <button onClick={() => setShowInstallBanner(false)} className="text-white/70 hover:text-white ml-1 flex-shrink-0"><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      <div className="flex flex-1 overflow-hidden">
       {/* ── Серверная панель (левая колонка иконок) ── */}
       <div className="w-[72px] bg-[#1a1d21] flex flex-col items-center py-3 gap-2 flex-shrink-0 overflow-y-auto">
         <button className="w-12 h-12 bg-[#4a7c4a] hover:bg-[#5a8c5a] rounded-2xl hover:rounded-xl transition-all duration-200 flex items-center justify-center shadow-lg group" title="Link — Главная">
@@ -745,6 +773,7 @@ export default function Index() {
 
       {/* Мобильный оверлей */}
       {mobileSidebarOpen && <div className="sm:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileSidebarOpen(false)} />}
+      </div>
     </div>
   );
 }

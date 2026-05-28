@@ -1,0 +1,52 @@
+{
+  "name": "Link — Защищённый мессенджер",
+  "short_name": "Link",
+  "description": "Защищённый мессенджер с видеосвязью, каналами и демонстрацией экрана",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f130f",
+  "theme_color": "#4a7c4a",
+  "lang": "ru",
+  "scope": "/",
+  "categories": ["communication", "social"],
+  "icons": [
+    {
+      "src": "https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Link — главный экран"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Личные сообщения",
+      "short_name": "Чаты",
+      "description": "Открыть личные сообщения",
+      "url": "/?tab=friends",
+      "icons": [{ "src": "https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Каналы",
+      "short_name": "Каналы",
+      "description": "Открыть каналы",
+      "url": "/?tab=channels",
+      "icons": [{ "src": "https://cdn.poehali.dev/projects/fbc019b6-e074-4ec4-8ec0-9ecf64c38e80/files/967c26eb-7f20-4ce3-9ca9-d1b0725114be.jpg", "sizes": "192x192" }]
+    }
+  ]
+}
