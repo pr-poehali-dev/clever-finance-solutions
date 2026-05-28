@@ -112,14 +112,34 @@ export default function Index() {
   }, [authUser]);
 
   const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault(); setAuthError(""); setAuthLoading(true);
-    const path = authMode === "login" ? "/login" : "/register";
-    const body: Record<string, string> = { username: authForm.username, password: authForm.password };
-    if (authMode === "register") body.display_name = authForm.display_name;
-    const res = await fetch(`${AUTH_URL}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const data = await res.json(); setAuthLoading(false);
-    if (!res.ok) { setAuthError(data.error || "Ошибка"); return; }
-    saveUser({ ...data, avatar_color: data.avatar_color || "#4a7c4a", bio: data.bio || "", status: data.status || "online" });
+    e.preventDefault();
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      const path = authMode === "login" ? "/login" : "/register";
+      const body: Record<string, string> = { username: authForm.username, password: authForm.password };
+      if (authMode === "register") body.display_name = authForm.display_name;
+      const res = await fetch(`${AUTH_URL}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAuthError(data.error || "Ошибка сервера");
+        return;
+      }
+      saveUser({
+        ...data,
+        avatar_color: data.avatar_color || "#4a7c4a",
+        bio: data.bio || "",
+        status: data.status || "online",
+      });
+    } catch {
+      setAuthError("Нет соединения с сервером. Попробуйте ещё раз.");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const updateStatus = async (status: string) => {
