@@ -2,11 +2,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Shield, Radio, Users, Mic, MicOff, Search, Menu, X, Send,
   UserPlus, Check, LogOut, Lock, Video, VideoOff, Monitor, Hash,
-  Plus, Copy, PhoneOff, Tv2, Settings, Bell, BellOff, ChevronDown,
-  ChevronRight, Smile, MoreHorizontal, Circle, Headphones, HeadphoneOff,
-  UserCircle, Edit3, Volume2,
+  Plus, Copy, PhoneOff, Tv2, Settings, ChevronDown,
+  ChevronRight, Smile, Headphones, HeadphoneOff, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import VoiceChannel from "@/components/VoiceChannel";
 
 const AUTH_URL     = "https://functions.poehali.dev/9f1f6cd4-ef39-4d6c-8aa9-a3b0fa392d42";
 const FRIENDS_URL  = "https://functions.poehali.dev/c818513e-108b-491b-be7a-8ae1d7792675";
@@ -65,6 +65,9 @@ export default function Index() {
   const activeChatRef = useRef<ChatView>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Голосовой канал
+  const [activeVoiceChannel, setActiveVoiceChannel] = useState<Channel | null>(null);
 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -536,11 +539,34 @@ export default function Index() {
                     {collapsedCategories[cat] ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}{cat}
                   </button>
                   {!collapsedCategories[cat] && chs.map(ch => (
-                    <button key={ch.id} onClick={() => openView({ type: "channel", channel: ch })}
-                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors group ${activeView?.type === "channel" && activeView.channel.id === ch.id ? "bg-[#35373c] text-white" : "text-[#8a9e8a] hover:text-white hover:bg-[#35373c]"}`}>
-                      {ch.type === "voice" ? <Volume2 className="w-4 h-4 flex-shrink-0" /> : <Hash className="w-4 h-4 flex-shrink-0" />}
+                    <button key={ch.id} onClick={() => {
+                      if (ch.type === "voice") {
+                        setActiveVoiceChannel(ch);
+                        setActiveView(null);
+                        activeChatRef.current = null;
+                        setMobileSidebarOpen(false);
+                      } else {
+                        openView({ type: "channel", channel: ch });
+                        setActiveVoiceChannel(null);
+                      }
+                    }}
+                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded transition-colors group ${
+                        ch.type === "voice" && activeVoiceChannel?.id === ch.id
+                          ? "bg-[#2a4a2a] text-[#4a7c4a]"
+                          : activeView?.type === "channel" && activeView.channel.id === ch.id
+                          ? "bg-[#35373c] text-white"
+                          : "text-[#8a9e8a] hover:text-white hover:bg-[#35373c]"
+                      }`}>
+                      {ch.type === "voice"
+                        ? <Volume2 className={`w-4 h-4 flex-shrink-0 ${activeVoiceChannel?.id === ch.id ? "text-[#4a7c4a]" : ""}`} />
+                        : <Hash className="w-4 h-4 flex-shrink-0" />}
                       <span className="text-sm truncate">{ch.name}</span>
-                      <span className="ml-auto text-[#5a7a5a] text-xs opacity-0 group-hover:opacity-100">{ch.member_count}</span>
+                      {ch.type === "voice" && activeVoiceChannel?.id === ch.id && (
+                        <span className="ml-auto flex items-center gap-1 text-[#4a7c4a] text-xs">
+                          <div className="w-1.5 h-1.5 bg-[#4a7c4a] rounded-full animate-pulse" />В эфире
+                        </span>
+                      )}
+                      {ch.type !== "voice" && <span className="ml-auto text-[#5a7a5a] text-xs opacity-0 group-hover:opacity-100">{ch.member_count}</span>}
                     </button>
                   ))}
                 </div>
@@ -549,6 +575,23 @@ export default function Index() {
             </>
           )}
         </div>
+
+        {/* Голосовой статус */}
+        {activeVoiceChannel && (
+          <div className="bg-[#1a2a1a] border-t border-[#2a4a2a] px-3 py-2 flex-shrink-0">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 bg-[#4a7c4a] rounded-full animate-pulse" />
+              <span className="text-[#4a7c4a] text-xs font-semibold truncate">{activeVoiceChannel.name}</span>
+              <span className="text-[#3a5a3a] text-xs ml-auto">В эфире</span>
+            </div>
+            <button
+              onClick={() => setActiveVoiceChannel(null)}
+              className="w-full text-xs text-red-400 hover:text-red-300 hover:bg-[#2a1a1a] rounded px-2 py-1 transition-colors flex items-center justify-center gap-1"
+            >
+              <PhoneOff className="w-3 h-3" /> Покинуть канал
+            </button>
+          </div>
+        )}
 
         {/* User panel */}
         <div className="h-14 bg-[#232428] px-2 flex items-center gap-2 flex-shrink-0">
@@ -590,8 +633,16 @@ export default function Index() {
       {/* ── Основная область ── */}
       <div className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Заголовок чата */}
-        {activeView ? (
+        {/* Голосовой канал */}
+        {activeVoiceChannel ? (
+          <VoiceChannel
+            key={activeVoiceChannel.id}
+            channelId={activeVoiceChannel.id}
+            channelName={activeVoiceChannel.name}
+            authUser={{ user_id: authUser.user_id, display_name: authUser.display_name, avatar_color: authUser.avatar_color }}
+            onLeave={() => setActiveVoiceChannel(null)}
+          />
+        ) : !activeVoiceChannel && activeView ? (
           <div className="h-12 bg-[#313338] border-b border-[#1e2124] flex items-center px-4 gap-3 flex-shrink-0 shadow-sm">
             <button className="sm:hidden text-[#8a9e8a] hover:text-white mr-2" onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}><Menu className="w-5 h-5" /></button>
             {activeView.type === "dm" ? (
@@ -632,16 +683,16 @@ export default function Index() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : !activeVoiceChannel ? (
           <div className="h-12 bg-[#313338] border-b border-[#1e2124] flex items-center px-4 gap-3 flex-shrink-0">
             <button className="sm:hidden text-[#8a9e8a] hover:text-white mr-2" onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}><Menu className="w-5 h-5" /></button>
             <Users className="w-5 h-5 text-[#5a7a5a]" />
             <span className="text-white font-semibold text-sm">Друзья</span>
           </div>
-        )}
+        ) : null}
 
         {/* Видео-область */}
-        {inCall && (
+        {!activeVoiceChannel && inCall && (
           <div className="bg-[#111214] border-b border-[#1e2124] p-3 flex gap-3 flex-wrap flex-shrink-0">
             <div className="relative">
               <video ref={localVideoRef} autoPlay muted playsInline className="w-44 h-32 object-cover rounded-xl bg-[#1e2124] border border-[#2a2d31]" />
@@ -662,7 +713,7 @@ export default function Index() {
         )}
 
         {/* Messages / Welcome */}
-        {activeView ? (
+        {!activeVoiceChannel && activeView ? (
           <>
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
               {messages.length === 0 && (
@@ -714,7 +765,7 @@ export default function Index() {
               </div>
             </form>
           </>
-        ) : (
+        ) : !activeVoiceChannel ? (
           /* Экран друзей */
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-2xl mx-auto">
@@ -791,7 +842,7 @@ export default function Index() {
               )}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       </div>
