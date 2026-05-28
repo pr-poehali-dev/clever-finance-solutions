@@ -1,4 +1,4 @@
-const CACHE_NAME = 'link-v1';
+const CACHE_NAME = 'link-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -43,17 +43,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Статика — Cache First
+  // JS/CSS — всегда сеть, без кеша (чтобы новые деплои загружались сразу)
+  const ext = new URL(event.request.url).pathname.split('.').pop();
+  if (ext === 'js' || ext === 'css' || ext === 'ts' || ext === 'tsx') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // Остальная статика — Network First
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') return response;
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        return response;
-      });
-    })
+    fetch(event.request).then((response) => {
+      if (!response || response.status !== 200 || response.type !== 'basic') return response;
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
 
